@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Adaptive Modulation Simulator</title>
+<style>
+:root{
+  --bg:#ffffff; --panel:#f7f8fa; --border:#e2e5ea; --text:#16181d; --sub:#6b7280;
+  --accent:#2563eb; --accent2:#0d9488; --warn:#c2410c; --tunnel:#dbeafe;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#15171b; --panel:#1d2025; --border:#2c3036; --text:#eceef1; --sub:#9aa1ac; --tunnel:#1e3a5f; }
+}
+:root[data-theme="dark"]{ --bg:#15171b; --panel:#1d2025; --border:#2c3036; --text:#eceef1; --sub:#9aa1ac; --tunnel:#1e3a5f; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px 48px;}
+h1{font-size:20px;margin:4px 0 2px}
+.sub{color:var(--sub);font-size:13px;margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.scenarios{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.scn{flex:1;min-width:110px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;font-size:14px;text-align:center}
+.scn.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, var(--panel))}
+svg{width:100%;height:auto;display:block}
+.callout{background:var(--tunnel);border-radius:10px;padding:10px 14px;font-size:13px;margin:12px 0}
+.badge{display:inline-block;padding:8px 16px;border-radius:999px;color:#fff;font-weight:600;font-size:14px;transition:background .25s}
+.badge.poor{background:#dc2626}
+.badge.medium{background:#d97706}
+.badge.high{background:#16a34a}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.stat{flex:1;min-width:110px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px}
+.stat .l{color:var(--sub);font-size:11px}
+.stat .v{font-size:16px;font-weight:600}
+.controls{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+button.ctrl{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+input[type=range]{flex:1;min-width:140px}
+.calc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;white-space:pre-wrap;line-height:1.65}
+.reason{font-size:13px;color:var(--sub);margin-top:8px}
+h3{font-size:14px;margin:0 0 8px}
+.legend{font-size:11.5px;color:var(--sub);margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.flow{display:flex;flex-direction:column;align-items:center;gap:2px}
+.fnode{padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-size:12.5px;text-align:center;color:var(--sub);transition:all .25s;min-width:140px}
+.fnode.active{border-color:var(--accent);color:var(--text);background:color-mix(in srgb, var(--accent) 14%, var(--bg));font-weight:600;box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent)}
+.fnode.lead{border-color:var(--accent2);background:color-mix(in srgb, var(--accent2) 16%, var(--bg))}
+.farrow{color:var(--border);font-size:14px;line-height:1}
+.frow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.fbranch{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:110px}
+.gauge{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,#dc2626 0%,#dc2626 22%,#d97706 22%,#d97706 40%,#16a34a 40%,#16a34a 100%);margin:10px 0 4px}
+.gmark{position:absolute;top:-4px;width:3px;height:22px;background:var(--text);border-radius:2px;transform:translateX(-1.5px)}
+.glabels{display:flex;justify-content:space-between;font-size:10px;color:var(--sub)}
+.steps{display:flex;flex-direction:column;gap:8px}
+.step{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+.step .num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step .body{flex:1;min-width:0}
+.step .f{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--sub)}
+.step .r{font-size:13.5px;font-weight:600}
+.selectwrap{display:flex;flex-direction:column;gap:4px;min-width:170px;flex:1}
+.selectwrap label{font-size:11px;color:var(--sub)}
+select.ctrl{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px}
+.obchips{display:flex;gap:6px;flex-wrap:wrap}
+.obchip{padding:6px 12px;border-radius:999px;border:1.5px solid var(--border);background:var(--panel);font-size:12px;cursor:pointer;color:var(--text)}
+.obchip.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 16%, var(--panel));font-weight:600}
+.chainrow{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.chip{padding:9px 15px;border-radius:12px;color:#fff;text-align:center;min-width:96px}
+.chip .t1{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.3px}
+.chip .t2{font-size:14px;font-weight:700}
+.chip.poor{background:#dc2626}
+.chip.medium{background:#d97706}
+.chip.high{background:#16a34a}
+.chainarrow{color:var(--sub);font-size:16px}
+.fnode[data-tip]{position:relative}
+.fnode[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);background:#111;color:#fff;padding:7px 10px;border-radius:7px;font-size:11px;width:210px;white-space:normal;z-index:30;box-shadow:0 6px 16px rgba(0,0,0,.3);text-align:left;line-height:1.45}
+.fnode[data-tip]:hover::before{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:100%;margin-bottom:-1px;border:5px solid transparent;border-top-color:#111}
+.fnode.poor{border-color:#dc2626}
+.fnode.medium{border-color:#d97706}
+.fnode.high{border-color:#16a34a}
+.fnode.poor.active{background:color-mix(in srgb,#dc2626 20%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,#dc2626 22%,transparent);color:var(--text)}
+.fnode.medium.active{background:color-mix(in srgb,#d97706 20%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,#d97706 22%,transparent);color:var(--text)}
+.fnode.high.active{background:color-mix(in srgb,#16a34a 20%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,#16a34a 22%,transparent);color:var(--text)}
+.story{background:var(--tunnel);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.55;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Adaptive Modulation Simulator</h1>
+  <div class="sub">Mobility → channel impairments → SNR → modulation selection → performance, with the maths behind each step</div>
+
+  <div class="scenarios">
+    <div class="scn active" data-s="pedestrian">🚶 Pedestrian</div>
+    <div class="scn" data-s="car">🚗 Car</div>
+    <div class="scn" data-s="train">🚆 Train</div>
+  </div>
+
+  <div class="card">
+    <svg viewBox="0 0 700 190" id="scene"></svg>
+    <div class="callout" id="eventText"></div>
+    <svg viewBox="0 0 700 110" id="snrGraph"></svg>
+    <div class="chainrow" id="chainRow"></div>
+    <div class="reason" id="whyText"></div>
+    <div class="controls">
+      <div class="selectwrap">
+        <label for="freqSel">Carrier frequency</label>
+        <select class="ctrl" id="freqSel">
+          <option value="900">900 MHz (2G/GSM)</option>
+          <option value="1800" selected>1.8 GHz (4G LTE)</option>
+          <option value="2400">2.4 GHz (WiFi/ISM)</option>
+          <option value="3500">3.5 GHz (5G mid-band)</option>
+          <option value="26000">26 GHz (5G mmWave)</option>
+        </select>
+        <div class="reason" id="freqText" style="margin-top:2px"></div>
+      </div>
+      <div class="selectwrap" style="flex:2">
+        <label>Obstacles (select any combination)</label>
+        <div class="obchips" id="obChips"></div>
+      </div>
+    </div>
+    <div class="reason" id="obText"></div>
+    <div class="controls">
+      <button class="ctrl" id="playBtn">Pause</button>
+      <span style="font-size:12px;color:var(--sub)">Position</span>
+      <input type="range" id="posSlider" min="0" max="100" value="0">
+    </div>
+    <div class="controls">
+      <span style="font-size:12px;color:var(--sub)" id="speedLabel">Speed</span>
+      <input type="range" id="speedSlider">
+      <span style="font-size:13px;font-weight:600" id="speedVal">—</span>
+    </div>
+    <div class="row">
+      <div class="stat"><div class="l">Speed</div><div class="v" id="stSpeed">—</div></div>
+      <div class="stat"><div class="l">Doppler</div><div class="v" id="stDop">—</div></div>
+      <div class="stat"><div class="l">Fading model</div><div class="v" id="stFade">—</div></div>
+      <div class="stat"><div class="l">Delay spread</div><div class="v" id="stDelay">—</div></div>
+      <div class="stat"><div class="l">SNR</div><div class="v" id="stSnr">—</div></div>
+      <div class="stat"><div class="l">Distance to tower</div><div class="v" id="stDist">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Signal flow — live, as it's actually happening</h3>
+    <div class="story" id="storyText"></div>
+    <div class="flow">
+      <div class="fnode lead" id="fUser" data-tip="Your phone — the start and end point of the whole story. Everything below happens to keep this call/data connected.">📱 MOBILE USER</div><div class="farrow">↓</div>
+      <div class="fnode active" id="fMoving" data-tip="You're physically changing position. That motion is the root cause of everything that follows — a stationary phone wouldn't face most of this.">Moving</div><div class="farrow">↓</div>
+      <div class="fnode active" id="fDoppler" data-tip="Because you're moving relative to the tower, the received wave's frequency shifts slightly — exactly like a siren pitch changing as an ambulance passes you.">DOPPLER SHIFT</div><div class="farrow">↓</div>
+      <div class="fnode active" data-tip="With Doppler in play, the channel's characteristics (strength, phase) are no longer fixed — they drift second by second as you move.">Channel keeps changing</div><div class="farrow">↓</div>
+      <div class="frow" style="width:100%;max-width:420px">
+        <div class="fbranch">
+          <div class="fnode active" id="fMulti" data-tip="Your signal doesn't take one path — it bounces off buildings, vehicles and terrain, so your phone receives several delayed copies of the same transmission.">MULTIPATH</div><div class="farrow">↓</div>
+          <div class="fnode active" data-tip="Reflection off flat surfaces, diffraction around edges, scattering off small objects like trees/poles — three ways a single signal splits into many arriving copies.">Reflection / Diffraction / Scattering</div><div class="farrow">↓</div>
+          <div class="fnode active" data-tip="The gap in arrival time between the earliest and latest copy of the signal. Bigger gap = more smearing between symbols.">Delay Spread</div><div class="farrow">↓</div>
+          <div class="fnode active" data-tip="Inter-Symbol Interference — when a delayed copy of one symbol overlaps the next symbol and corrupts it. This is what a cyclic prefix in OFDM is designed to absorb.">ISI</div>
+        </div>
+        <div class="fbranch">
+          <div class="fnode active" data-tip="Additive White Gaussian Noise — random thermal/electronic noise that's present in every receiver, independent of multipath.">AWGN</div><div class="farrow">↓</div>
+          <div class="fnode active" data-tip="The background hiss competing with your actual signal — like trying to hear a friend in a noisy room.">Noise</div>
+        </div>
+      </div>
+      <div class="farrow">↓</div>
+      <div class="fnode active" id="fFading" data-tip="When the multipath copies recombine at your antenna, they can reinforce (stronger signal) or cancel (weaker signal) each other — signal strength fluctuates even if you don't move far.">FADING</div><div class="farrow">↓</div>
+      <div class="fnode active" id="fFadeType" data-tip="The statistical model used here. Rayleigh = no dominant direct path (typical in cities); Rician = one strong direct path plus weaker reflections (near line-of-sight, e.g. open street).">RAYLEIGH FADING</div><div class="farrow">↓</div>
+      <div class="fnode lead" id="fSnr" data-tip="Signal-to-Noise Ratio — how strong your desired signal is compared to the noise floor. This single number is what the adaptive algorithm actually watches.">SNR</div><div class="farrow">↓</div>
+      <div class="fnode active" id="fQuality" data-tip="SNR translated into a plain verdict: is the channel currently good, so-so, or bad right now?">CHANNEL QUALITY</div><div class="farrow">↓</div>
+      <div class="fnode lead" data-tip="The decision engine: it reads channel quality and picks a modulation scheme before every burst of data goes out.">ADAPTIVE MODULATION</div><div class="farrow">↓</div>
+      <div class="frow" style="width:100%;max-width:520px">
+        <div class="fbranch">
+          <div class="fnode poor" id="bPoor1" data-tip="SNR has dropped low — heavy fading or you're far from the tower/in a dead zone.">Poor SNR</div><div class="farrow">↓</div>
+          <div class="fnode poor" id="bPoor2" data-tip="1 bit per symbol. The most robust scheme — widely spaced symbols are hard to confuse even in a noisy channel.">BPSK</div><div class="farrow">↓</div>
+          <div class="fnode poor" id="bPoor3" data-tip="Slow but it gets through — prioritising the call staying connected over call quality.">Reliable</div>
+        </div>
+        <div class="fbranch">
+          <div class="fnode medium" id="bMed1" data-tip="Channel is average — not great, not terrible. A middle-ground scheme fits.">Medium SNR</div><div class="farrow">↓</div>
+          <div class="fnode medium" id="bMed2" data-tip="2 bits per symbol. A practical compromise between BPSK's robustness and QAM's speed.">QPSK</div><div class="farrow">↓</div>
+          <div class="fnode medium" id="bMed3" data-tip="Reasonable speed with acceptable error resilience — the everyday middle setting.">Balanced</div>
+        </div>
+        <div class="fbranch">
+          <div class="fnode high" id="bHigh1" data-tip="Strong, clean signal — you're likely close to the tower with a clear line of sight.">High SNR</div><div class="farrow">↓</div>
+          <div class="fnode high" id="bHigh2" data-tip="4–6 bits per symbol. Tightly packed constellation points — needs a clean channel or errors spike fast.">16/64-QAM</div><div class="farrow">↓</div>
+          <div class="fnode high" id="bHigh3" data-tip="Maximum data rate the system offers — the channel can currently afford the risk.">Faster</div>
+        </div>
+      </div>
+      <div class="farrow">↓</div>
+      <div class="fnode active" data-tip="The chosen modulation is used to actually send the bits over the air right now.">TRANSMISSION</div><div class="farrow">↓</div>
+      <div class="fnode active" data-tip="The other end (tower or phone) picks up the transmitted waveform and tries to demodulate it back into bits.">RECEIVER</div><div class="farrow">↓</div>
+      <div class="fnode lead" id="fBer" data-tip="Bit Error Rate — the fraction of received bits that came out wrong compared to what was sent. Lower is better.">BER</div><div class="farrow">↓</div>
+      <div class="fnode lead" id="fThr" data-tip="How much usable data actually got through per second, accounting for both the modulation's bit-rate and the errors it produced.">THROUGHPUT</div><div class="farrow">↓</div>
+      <div class="fnode active" data-tip="The project's real question: does switching modulation on the fly actually beat sticking with one fixed scheme? Plot BER and throughput for both to find out.">Compare performance</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Live calculation trace</h3>
+      <div class="gauge"><div class="gmark" id="gaugeMark"></div></div>
+      <div class="glabels"><span>Poor (&lt;6 dB)</span><span>Medium (6–16 dB)</span><span>Good (&gt;16 dB)</span></div>
+      <div class="steps" id="stepsBox"></div>
+      <div class="legend">Carrier frequency and obstacle are set above the scene. Path loss uses a log-distance model (n = path-loss exponent, scenario-dependent); higher frequencies and mmWave suffer more from both free-space loss and obstacles. Replace thresholds/exponents with values from your own link-budget once fixed.</div>
+    </div>
+    <div class="card">
+      <h3>Performance at current SNR</h3>
+      <div class="row">
+        <div class="stat"><div class="l">Modulation</div><div class="v" id="pfMod">—</div></div>
+        <div class="stat"><div class="l">Bits/symbol</div><div class="v" id="pfBits">—</div></div>
+        <div class="stat"><div class="l">Approx. BER</div><div class="v" id="pfBer">—</div></div>
+        <div class="stat"><div class="l">Rel. throughput</div><div class="v" id="pfThr">—</div></div>
+      </div>
+      <svg viewBox="0 0 300 130" id="berGraph" style="margin-top:12px"></svg>
+      <div class="reason">Curve: approximate BER vs SNR for each scheme (Gray-coded QAM, AWGN-equivalent). Marker = current operating point. Fixed 64-QAM would sit on the steep right-hand curve and fail badly the moment SNR drops — that gap is the adaptive scheme's whole justification.</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Extra realism modelled</h3>
+    <div class="reason">• <b>Path loss</b> grows with distance from the tower (log-distance exponent n, higher for car/train due to street clutter).<br>
+    • <b>Shadowing</b> — random log-normal fluctuation (buildings, foliage) layered on top of fading, resampled continuously.<br>
+    • <b>Multipath count</b> scales delay spread — more reflectors (buildings, tunnels) → larger delay spread → more inter-symbol interference risk, which is why OFDM/cyclic-prefix is used at high SNR.<br>
+    • <b>Coherence time</b> T_c ≈ 0.423/f_d shown per scenario — at train speeds it drops sharply, meaning the channel estimate can go stale between adaptation decisions unless updates are fast enough.</div>
+  </div>
+</div>
+
+<script>
+const scenarios = {
+  pedestrian:{speed:5, range:5, fade:'Rician (near LOS)', delayBase:0.3, amp:1.4, base:20, n:2.2, shadowSD:2, multipath:2, bg:'park', ob:['foliage']},
+  car:{speed:60, range:10, fade:'Rayleigh', delayBase:1.2, amp:5.5, base:13, n:3.0, shadowSD:4, multipath:5, bg:'street', ob:['buildings']},
+  train:{speed:120, range:20, fade:'Rayleigh (fast)', delayBase:2.5, amp:8.5, base:9, n:3.5, shadowSD:5, multipath:8, bg:'rail', ob:['tunnel']}
+};
+const freqBands = {
+  '900':{fc:900e6, label:'900 MHz (2G/GSM)', mm:false, note:'Longest wavelength here → lowest Doppler for a given speed, and the best penetration through walls/foliage — why older cellular networks used sub-1GHz for wide rural coverage.'},
+  '1800':{fc:1.8e9, label:'1.8 GHz (4G LTE)', mm:false, note:'The default 4G band — a practical balance between Doppler sensitivity, path loss and obstacle penetration.'},
+  '2400':{fc:2.4e9, label:'2.4 GHz (WiFi/ISM)', mm:false, note:'Same band Wi-Fi uses — shorter wavelength than 1.8 GHz means slightly higher Doppler and more loss through walls/foliage.'},
+  '3500':{fc:3.5e9, label:'3.5 GHz (5G mid-band)', mm:false, note:'Typical 5G mid-band — shorter wavelength, higher Doppler for the same speed, and more obstacle sensitivity than 4G bands.'},
+  '26000':{fc:26e9, label:'26 GHz (5G mmWave)', mm:true, note:'5G mmWave — extremely short wavelength. Doppler is far larger at the same speed, and the signal is blocked by almost anything (trees, glass, even a hand) — why mmWave cells sit dense and need near line-of-sight.'}
+};
+const obstacles = {
+  none:{label:'Open sky / clear LOS', icon:'☀️', tip:'No obstruction — clean line of sight to the tower.', constLoss:0, periodic:false, periodicDepth:0},
+  tunnel:{label:'Tunnel', icon:'🚇', tip:'Direct path fully blocked while inside — deep, brief periodic fade.', constLoss:0, periodic:true, periodicDepth:9},
+  buildings:{label:'Urban buildings', icon:'🏢', tip:'Dense buildings reflect the signal repeatedly — extra multipath/delay spread plus a moderate constant loss.', constLoss:4, periodic:false, periodicDepth:0, multipathBoost:2},
+  foliage:{label:'Trees / foliage', icon:'🌳', tip:'Leaves and branches absorb signal energy — steady attenuation, worse at higher frequencies.', constLoss:3, periodic:false, periodicDepth:0, freqSensitive:true},
+  hill:{label:'Hill / terrain', icon:'⛰️', tip:'A landform blocks the direct path — the signal must diffract around it, causing a big constant loss.', constLoss:7, periodic:false, periodicDepth:0},
+  interference:{label:'Co-channel interference', icon:'📡', tip:'Another transmitter nearby raises the noise floor — steady drop in effective SNR, no physical block.', constLoss:5, periodic:false, periodicDepth:0}
+};
+let cur='pedestrian', pos=0, playing=true, freqKey='1800', obKeys=['foliage'], curSpeed=5;
+const c=(v,d=1)=>(Math.round(v*Math.pow(10,d))/Math.pow(10,d));
+const seedShadow=(p)=> Math.sin(p*1.9)*0.6 + Math.sin(p*5.3+1)*0.4;
+
+function doppler(speedKmh, fc){ const v=speedKmh*1000/3600, lambda=3e8/fc; return v/lambda; }
+function coherence(fd){ return 0.423/fd; }
+function pathLossDb(d, n){ return 10*n*Math.log10(Math.max(d,1)); }
+
+function activeObs(){ return obKeys.length ? obKeys.map(k=>obstacles[k]) : [obstacles.none]; }
+
+function snrAt(p, sc){
+  const dist = 20 + p*3.2;
+  const pl = pathLossDb(dist, sc.n) - pathLossDb(20, sc.n);
+  const shadow = seedShadow(p)*sc.shadowSD;
+  const fastFade = Math.sin(p/2.6)*sc.amp*0.5;
+  const fb=freqBands[freqKey];
+  const freqGHz = fb.fc/1e9;
+  const freqPenalty = 1.5*Math.log2(freqGHz/0.9+1);
+  const mmBoost = fb.mm?1.6:1;
+  let constPenalty=0, periodicPenalty=0;
+  activeObs().forEach(ob=>{
+    constPenalty += (ob.constLoss||0)*mmBoost*(ob.freqSensitive?(1+freqGHz/15):1);
+    if(ob.periodic){ const tp=(p%40); if(tp>16&&tp<22) periodicPenalty = Math.min(periodicPenalty, -(ob.periodicDepth*mmBoost)*(1-Math.abs(tp-19)/3)); }
+  });
+  return sc.base - pl*0.15 + shadow + fastFade - freqPenalty - constPenalty + periodicPenalty;
+}
+function schemeFor(snr){
+  if(snr<6) return {m:'BPSK', bits:1, ber:0.06, word:'Reliable', group:'poor'};
+  if(snr<10) return {m:'QPSK', bits:2, ber:0.02, word:'Balanced', group:'medium'};
+  if(snr<16) return {m:'16-QAM', bits:4, ber:0.006, word:'Balanced', group:'medium'};
+  if(snr<22) return {m:'64-QAM', bits:6, ber:0.0015, word:'Faster', group:'high'};
+  return {m:'64-QAM / OFDM', bits:6, ber:0.0004, word:'Faster', group:'high'};
+}
+
+
+
+function drawScene(sc, p){
+  const svg = document.getElementById('scene');
+  const vx = (p/100)*640+10;
+  let veh='';
+  if(sc.bg==='park'){
+    veh = `<circle cx="${vx+8}" cy="128" r="6" fill="var(--accent)"/><line x1="${vx+8}" y1="134" x2="${vx+8}" y2="148" stroke="var(--accent)" stroke-width="4"/>`;
+  } else if(sc.bg==='street'){
+    veh = `<rect x="${vx}" y="128" width="38" height="20" rx="4" fill="var(--accent)"/><circle cx="${vx+8}" cy="150" r="4" fill="#111"/><circle cx="${vx+28}" cy="150" r="4" fill="#111"/>`;
+  } else {
+    veh = `<rect x="${vx}" y="122" width="46" height="22" rx="3" fill="var(--accent)"/><rect x="${vx+6}" y="126" width="34" height="8" fill="#fff" opacity="0.5"/>`;
+  }
+  let ob='';
+  const keys = obKeys.length? obKeys : ['none'];
+  if(keys.includes('foliage')){
+    for(let i=0;i<5;i++){ const x=90+i*130; ob+=`<circle cx="${x}" cy="128" r="16" fill="var(--accent2)" opacity="0.35"/><rect x="${x-2}" y="128" width="4" height="22" fill="var(--sub)" opacity="0.5"/>`; }
+  }
+  if(keys.includes('buildings')){
+    for(let i=0;i<4;i++){ const x=110+i*150; ob+=`<rect x="${x}" y="88" width="58" height="62" fill="var(--sub)" opacity="0.22"/>`; }
+  }
+  if(keys.includes('tunnel')){
+    for(let i=0;i<4;i++){ const x=90+i*160; ob+=`<path d="M${x} 150 L${x} 120 A18 18 0 0 1 ${x+36} 120 L${x+36} 150 Z" fill="var(--sub)" opacity="0.55"/>`; }
+  }
+  if(keys.includes('hill')){
+    ob += `<path d="M0 150 L160 60 L320 150 Z" fill="var(--sub)" opacity="0.3"/>`;
+  }
+  if(keys.includes('interference')){
+    ob += `<circle cx="600" cy="100" r="5" fill="var(--warn)"/><line x1="600" y1="100" x2="600" y2="150" stroke="var(--warn)" stroke-width="3"/>
+    <circle cx="600" cy="100" r="14" fill="none" stroke="var(--warn)" stroke-width="1.5" opacity="0.5"/>
+    <circle cx="600" cy="100" r="24" fill="none" stroke="var(--warn)" stroke-width="1" opacity="0.3"/>`;
+  }
+  svg.innerHTML = `<text x="10" y="18" font-size="11" fill="var(--sub)">Tower</text>
+    <line x1="14" y1="26" x2="14" y2="80" stroke="var(--accent)" stroke-width="4"/>
+    <line x1="0" y1="150" x2="700" y2="150" stroke="var(--border)" stroke-width="2"/>
+    ${ob}${veh}`;
+}
+function drawGraph(sc){
+  const svg=document.getElementById('snrGraph');
+  let pts=[]; for(let x=0;x<=100;x++){ pts.push([x*7, 90-((snrAt(x,sc)+10))*2]); }
+  const path=pts.map((p,i)=>(i===0?'M':'L')+p[0]+' '+p[1]).join(' ');
+  const mx=pos*7;
+  svg.innerHTML=`<line x1="0" y1="88" x2="700" y2="88" stroke="var(--border)"/>
+    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="3"/>
+    <line x1="${mx}" y1="10" x2="${mx}" y2="100" stroke="var(--warn)" stroke-width="2"/>`;
+}
+function drawBer(snr){
+  const svg=document.getElementById('berGraph');
+  const curves=[{m:'BPSK',k:1},{m:'QPSK',k:2},{m:'16-QAM',k:4},{m:'64-QAM',k:6}];
+  let out='<line x1="20" y1="10" x2="20" y2="110" stroke="var(--border)"/><line x1="20" y1="110" x2="290" y2="110" stroke="var(--border)"/>';
+  curves.forEach((cv,i)=>{
+    let d='';
+    for(let x=0;x<=270;x++){ const s=x/9; const ber=1/(1+Math.exp((s-cv.k*3)/1.6)); const y=110-ber*100; d+=(x===0?'M':'L')+(20+x)+' '+y+' '; }
+    out+=`<path d="${d}" fill="none" stroke="var(--accent2)" stroke-width="${i===curves.length-1?2.5:1.2}" opacity="${0.35+i*0.15}"/>`;
+  });
+  const mx=20+Math.max(0,Math.min(270,snr*9));
+  out+=`<line x1="${mx}" y1="10" x2="${mx}" y2="110" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3,3"/>`;
+  out+=`<text x="22" y="122" font-size="9" fill="var(--sub)">SNR →</text>`;
+  svg.innerHTML=out;
+}
+
+function render(){
+  const sc=scenarios[cur];
+  const fb=freqBands[freqKey];
+  const obs=activeObs();
+  const snr=snrAt(pos,sc);
+  const sch=schemeFor(snr);
+  const fd=doppler(curSpeed,fb.fc);
+  const tc=coherence(fd);
+  const dist=20+pos*3.2;
+  const mmBoost = fb.mm?1.6:1;
+  let inTunnel=false;
+  obs.forEach(ob=>{ if(ob.periodic){ const tp=(pos%40); if(tp>16&&tp<22) inTunnel=true; } });
+  const effMultipath = sc.multipath + obs.reduce((s,ob)=>s+(ob.multipathBoost||0),0);
+  const obLabel = obs.map(o=>o.label).join(' + ');
+
+  document.getElementById('stSpeed').textContent=curSpeed+' km/h';
+  document.getElementById('stDop').textContent=c(fd)+' Hz';
+  document.getElementById('stFade').textContent=sc.fade;
+  document.getElementById('stDelay').textContent=c(sc.delayBase*(1+effMultipath*0.1),2)+' µs';
+  document.getElementById('stSnr').textContent=c(snr,1)+' dB';
+  document.getElementById('stDist').textContent=c(dist)+' m';
+  document.getElementById('freqText').textContent = fb.note;
+  document.getElementById('obText').innerHTML = obs.map(o=>`<b>${o.icon} ${o.label}</b> — ${o.tip}`).join('<br>');
+  document.getElementById('eventText').textContent = inTunnel
+    ? 'Blocked right now — direct path obstructed, deep brief fade in progress.'
+    : `Open link — SNR shaped by path loss, shadowing, ${fb.label} propagation and ${obLabel.toLowerCase()} effects (${effMultipath} dominant multipath rays assumed).`;
+  const snrWord = sch.group==='poor'?'Poor':sch.group==='medium'?'Medium':'High';
+  document.getElementById('whyText').textContent = `Measured SNR ${c(snr,1)} dB (${snrWord}) falls in the ${sch.m} band → link backs off/steps up to keep BER low rather than risk errors on a stronger scheme.`;
+
+  document.getElementById('chainRow').innerHTML = `
+    <div class="chip ${sch.group}"><div class="t1">SNR</div><div class="t2">${c(snr,1)} dB · ${snrWord}</div></div>
+    <div class="chainarrow">→</div>
+    <div class="chip ${sch.group}"><div class="t1">Scheme</div><div class="t2">${sch.m}</div></div>
+    <div class="chainarrow">→</div>
+    <div class="chip ${sch.group}"><div class="t1">Behaviour</div><div class="t2">${sch.word}</div></div>`;
+
+  drawScene(sc,pos);
+  drawGraph(sc);
+  drawBer(snr);
+
+  const v=curSpeed*1000/3600;
+  const pl=pathLossDb(dist,sc.n);
+  const shadow=seedShadow(pos)*sc.shadowSD;
+  const freqGHz=fb.fc/1e9;
+  const freqPenalty=1.5*Math.log2(freqGHz/0.9+1);
+  const obPenaltyTotal = obs.reduce((s,ob)=>s+(ob.constLoss||0)*mmBoost*(ob.freqSensitive?(1+freqGHz/15):1),0);
+  const steps=[
+    {l:'Speed → wavelength', f:`v=${curSpeed} km/h=${c(v,2)} m/s, λ=c/f_c (${fb.label}) = ${c(3e8/fb.fc,4)} m`, r:`λ = ${c(3e8/fb.fc,5)} m`},
+    {l:'Doppler shift', f:`f_d = v / λ  —  higher carrier freq → shorter λ → higher f_d at the same speed`, r:`${c(fd,1)} Hz`},
+    {l:'Coherence time', f:`T_c ≈ 0.423 / f_d`, r:`${c(tc*1000,2)} ms`},
+    {l:'Path loss (log-distance)', f:`PL(d)=10·n·log10(d), n=${sc.n}, d=${c(dist)} m`, r:`${c(pl,1)} dB`},
+    {l:'Carrier-frequency penalty', f:`higher f_c → more free-space loss & obstacle sensitivity (${fb.label})`, r:`-${c(freqPenalty,1)} dB`},
+    {l:'Shadowing (log-normal, σ=' + sc.shadowSD + ' dB)', f:`random draw, resampled with position`, r:`${c(shadow,1)} dB`},
+    {l:'Obstacle penalty', f:`${obLabel}, freq-scaled for ${fb.label}`, r: inTunnel?'blocking now':`${obPenaltyTotal?'-'+c(obPenaltyTotal,1)+' dB':'none'}`},
+    {l:'Instantaneous SNR', f:`base − loss·k + shadow + fast-fade − freq/obstacle penalties${inTunnel?' + block':''}`, r:`${c(snr,2)} dB`},
+    {l:'Selected scheme', f:`${c(snr,1)} dB falls in ${sch.m} band`, r:`${sch.m} (${sch.bits} bits/sym) — ${sch.word}`}
+  ];
+  document.getElementById('stepsBox').innerHTML = steps.map((s,i)=>
+    `<div class="step"><div class="num">${i+1}</div><div class="body"><div class="f">${s.l} — ${s.f}</div></div><div class="r">${s.r}</div></div>`).join('');
+  const gpct = Math.max(0,Math.min(100,(snr+10)/32*100));
+  document.getElementById('gaugeMark').style.left = gpct+'%';
+
+  document.getElementById('pfMod').textContent=sch.m;
+  document.getElementById('pfBits').textContent=sch.bits;
+  document.getElementById('pfBer').textContent=sch.ber;
+  document.getElementById('pfThr').textContent=c(sch.bits*(1-sch.ber)*100)+'%';
+
+  // flow diagram live state
+  document.getElementById('fMoving').textContent = 'Moving ('+(cur==='pedestrian'?'walking':cur)+')';
+  document.getElementById('fFadeType').textContent = sc.fade.toUpperCase();
+  document.getElementById('fMulti').classList.toggle('lead', inTunnel);
+  let group = sch.group==='poor'?'Poor':(sch.group==='medium'?'Med':'High');
+  ['bPoor','bMed','bHigh'].forEach(g=>{
+    ['1','2','3'].forEach(n=>{
+      const el=document.getElementById('b'+g+n);
+      el.classList.toggle('active', g===group);
+    });
+  });
+  document.getElementById('fSnr').classList.remove('poor','medium','high');
+  document.getElementById('fSnr').classList.add(sch.group);
+  document.getElementById('fQuality').classList.remove('poor','medium','high');
+  document.getElementById('fQuality').classList.add(sch.group);
+  document.getElementById('fQuality').textContent = 'CHANNEL QUALITY: ' + snrWord.toUpperCase();
+  document.getElementById('fBer').textContent = 'BER ≈ '+sch.ber;
+  document.getElementById('fThr').textContent = 'THROUGHPUT ≈ '+c(sch.bits*(1-sch.ber)*100)+'%';
+
+  const who = cur==='pedestrian'?'A pedestrian':(cur==='car'?'A driver':'A train passenger');
+  document.getElementById('storyText').textContent =
+    `${who} is on a call at ${curSpeed} km/h over ${fb.label}, ${c(dist)} m from the tower, with ${obLabel.toLowerCase()} in the environment. `+
+    `${inTunnel?'Right now the path is blocked — a deep fade is underway. ':''}`+
+    `Because the carrier is ${fb.label}, the wavelength is ${c(3e8/fb.fc,4)} m — that sets how much Doppler this speed produces (${c(fd,1)} Hz) and how easily the obstacles cut through the signal. `+
+    `Reflections add multipath and ${c(sc.delayBase*(1+effMultipath*0.1),2)} µs of delay spread, layering ${sc.fade.toLowerCase()} on top of background noise and the obstacles' own loss. `+
+    `Net result: SNR = ${c(snr,1)} dB (${snrWord}) — so the system is using ${sch.m} to stay ${sch.word.toLowerCase()}.`;
+}
+
+function buildObChips(){
+  const box=document.getElementById('obChips');
+  box.innerHTML = Object.keys(obstacles).filter(k=>k!=='none').map(k=>
+    `<div class="obchip" data-o="${k}">${obstacles[k].icon} ${obstacles[k].label}</div>`).join('');
+  box.querySelectorAll('.obchip').forEach(el=>{
+    el.classList.toggle('active', obKeys.includes(el.dataset.o));
+    el.addEventListener('click',()=>{
+      const k=el.dataset.o;
+      if(obKeys.includes(k)) obKeys=obKeys.filter(x=>x!==k); else obKeys=[...obKeys,k];
+      el.classList.toggle('active');
+      render();
+    });
+  });
+}
+function setupSpeedSlider(){
+  const sc=scenarios[cur];
+  const min=Math.max(0, sc.speed-sc.range), max=sc.speed+sc.range;
+  const sl=document.getElementById('speedSlider');
+  sl.min=min; sl.max=max; sl.value=curSpeed;
+  document.getElementById('speedLabel').textContent=`Speed (±${sc.range} km/h)`;
+  document.getElementById('speedVal').textContent=curSpeed+' km/h';
+}
+
+document.getElementById('freqSel').addEventListener('change',e=>{ freqKey=e.target.value; render(); });
+document.getElementById('speedSlider').addEventListener('input',e=>{ curSpeed=+e.target.value; document.getElementById('speedVal').textContent=curSpeed+' km/h'; render(); });
+buildObChips();
+
+
+document.querySelectorAll('.scn').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.scn').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active'); cur=el.dataset.s;
+    curSpeed = scenarios[cur].speed;
+    obKeys = [...scenarios[cur].ob];
+    buildObChips();
+    setupSpeedSlider();
+    render();
+  });
+});
+document.getElementById('posSlider').addEventListener('input',e=>{ pos=+e.target.value; playing=false; document.getElementById('playBtn').textContent='Play'; render(); });
+document.getElementById('playBtn').addEventListener('click',e=>{ playing=!playing; e.target.textContent=playing?'Pause':'Play'; });
+setInterval(()=>{
+  if(playing){
+    const sc=scenarios[cur];
+    const ratio = curSpeed / sc.speed;
+    pos = (pos + 0.5*ratio) % 100;
+    document.getElementById('posSlider').value=pos;
+    render();
+  }
+},120);
+
+setupSpeedSlider();
+render();
+</script>
+</body>
+</html>
